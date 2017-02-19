@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Step09_Game.html</title>
+	<style>
+		#myCanvas{
+			border:1px solid red;
+		}
+	</style>
+</head>
+<body>
+
+<canvas id="myCanvas" width="500" height="800"></canvas>
+
+<script>
+	
+	var canvas = document.querySelector("#myCanvas");
+	var context=canvas.getContext("2d");
+
+	//이미지 로딩하기
+
+	var unit1=new Image();
+	unit1.src="images/unit1.png";
+	var unit2=new Image();
+	unit2.src = "images/unit2.png";
+	//유닛의 이미지를 배열에 저장
+	var unit3 = new Image();
+	unit3.src = "images/bottle.png";
+
+	var unitImgs=[unit3,unit1,unit2];
+	//유닛 이미질 인덱스
+	var unitIndex=1;
+
+
+	var backbg=new Image();
+	backbg.src="images/backbg.png";
+	var missImg=new Image();
+	missImg.src="images/mi1.png";
+
+	// 적기 이미지 로딩하기
+	var juck1=new Image();
+	juck1.src="images/juck1.png";
+	var juck2=new Image();
+	juck2.src="images/juck2.png";
+	var juckImgs=[juck1, juck2];
+
+	//적기의 x 좌표 종류
+	var juckX=[50, 150, 250, 350, 450];
+	var juckList=[];   //{x:,y:, isDead:, energy:, type:}
+
+
+	var puff1=new Image();
+	puff1.src="images/puff1.png";
+	var puff2=new Image();
+	puff2.src="images/puff2.png";
+	var puff3=new Image();
+	puff3.src="images/puff3.png";
+	var puff4=new Image();
+	puff4.src="images/puff4.png";
+	var puff5=new Image();
+	puff5.src="images/puff5.png";
+	var puffImgs = [puff1,puff2,puff3,puff4,puff5];
+	var puffIndex =0;
+
+	//유닛의 좌표를 담을 변수
+	var unitX=0;
+	var unitY=0;
+	//배경 이미지의 y 좌표를 담을 변수
+	var back1Y=0;
+	var back2Y=-800;
+
+	//미사일 정보를 담을 배열 
+	var missList=[];
+	//카운트를 셀 변수
+	var count=0;
+
+
+	//이미지 로딩이 완료 되었을때 실행할 함수 등록
+	// unit1.onload=function(){
+	// 	drawScreen();
+	// };
+
+
+	canvas.addEventListener("mousemove",function(e){
+		//이벤트가 일어난 곳의 좌표를 유닛의 좌표에 반영한다.
+		unitX = e.offsetX;
+		unitY = e.offsetY;
+		//유닛 이미지를 그려준다.
+	});
+	
+
+	//1초에 50번씩 새로 그려준다.
+	setInterval(drawScreen, 20);
+
+	
+
+
+	function drawScreen(){
+		count++
+		//유닛 이미지를 그려준다.
+		//context.clearRect(0,0,500,800);
+		context.drawImage(backbg,0,back1Y,500,800);
+		context.drawImage(backbg,0,back2Y,500,800);
+
+		//반복문 돌면서 적기 이미지를 그린다.
+		for (var i = 0; i < juckList.length; i++) {
+			var tmp=juckList[i];
+			context.drawImage(juckImgs[tmp.type], tmp.x-50, tmp.y-50, 100,100);
+		};
+
+
+
+		
+		//반복문 돌면서 미사일 이미지를 그린다.
+		for(var i=0; i<missList.length; i++){
+			//i 번째 미사일 객체 얻어오기
+			// var tmp=missList[i];
+			//그리기
+			context.drawImage(missImg,missList[i].x-25,missList[i].y-25,50,50);
+		}
+		//유닛 이미지 그리기
+		context.drawImage(unitImgs[unitIndex],unitX-50,unitY-50,100,100);
+
+		//퍼프 이미지 그리기
+		context.drawImage(puffImgs[puffIndex],250-50,400-50,100,100);
+		
+		backScroll();
+		//미사일 움직이기
+		moveMissile();
+		//제거할 미사일은 제거하기
+		checkMissile();
+		//유닛 애니메이션
+		unitAnimation();
+		//퍼프 애니메이션
+		puffAnimation();
+
+		makeEnemy();
+		moveEnemy();
+		checkEnemy();
+		//미사일과 적기의 충돌 검사
+		missEnemyCheck();
+
+		unitEnemyCheck();
+	};
+
+	function unitEnemyCheck(){
+		for(var i=0; i<juckList.length; i++){
+			//i 번째 적기 객채를 불러온다.
+			var tmp = juckList[i];
+			//unit 과 충돌했는지 검사한다
+			var isUnitDead = unitX > tmp.x-50 &&
+							 unitX < tmp.x+50 &&
+							 unitY > tmp.y-50 &&
+							 unitY < tmp.y+50;
+			if(isUnitDead){
+				console.log("으악!");
+				unitIndex=0;
+				// context.drawImage(unitImgs[unitIndex],unitX-50,unitY-50,100,100);
+			}				 
+
+		}
+	}
+
+	function missEnemyCheck(){
+		for (var i = 0; i < missList.length; i++) {
+			//i 번째 미사일 객체 불러오기
+			var m = missList[i];
+			for (var j = 0; j < juckList.length; j++) {
+				//j 번째 적기 객체 불러오기
+				var e = juckList[j];
+				var isShooted = m.x>e.x-50 &&
+								m.x<e.x+50 &&
+								m.y>e.y-50 &&
+								m.y<e.y+50;
+				if(isShooted){
+					m.isDead=true; // 미사일 제거
+					e.energy -= 50; // 적기의 에너지 줄이기
+					if(e.energy <=0)//적기의 에너지가 모두 닳았다면
+						e.isDead=true;//적기제거
+				}				
+
+
+			}
+		}
+	}
+
+	//적기 만드는 함수
+	function makeEnemy(){
+		if(count%20 != 0){
+			return;
+		}
+		//적기의 x 좌표 렌덤하게 얻어내기
+
+		var ranIndex= parseInt(Math.random()*5);
+		var x=juckX[ranIndex];
+		var y=50;
+		var type= parseInt(Math.random()*2); // 0 또는 1 얻어내기
+		var energy;
+		if(type==0){
+			energy=100;
+		}
+		if(type==1){
+			energy=200;
+		}
+		var obj = {x:x, y:y, isDead:false, energy:energy, type:type};
+		juckList.push(obj); 
+	};
+	//적기 움직이는 함수
+	function moveEnemy(){
+		for (var i = 0; i < juckList.length; i++) {
+			var tmp =  juckList[i];
+			tmp.y += 10;
+			if(tmp.y >850){ //아래쪽으로 화면을 벗어 났다면
+				tmp.isDead = true;  //배열에서 제거 될수 있도록 표시
+			}
+		}
+
+	};
+	//배열에서 제거할 적기는 제거하는 함수
+	function checkEnemy(){
+		for (var i = juckList.length - 1; i >= 0; i--) {
+			var tmp =  juckList[i];
+			if(tmp.isDead){
+				juckList.splice(i,1);
+			}
+		}
+
+	};
+
+
+	function puffAnimation(){
+
+		if(count%20 != 0){
+			return;
+		}
+
+		puffIndex++;
+		if(puffIndex==5){
+			puffIndex=0;
+		}
+	};
+
+
+	function unitAnimation(){
+		//10번 호출될때 9번은 여기서 함수를 종료 시켜라
+		if(count%80 != 0){
+			return;
+		}
+
+		unitIndex++;
+		if(unitIndex==3){ //없는 인덱스라면
+			unitIndex=1;	//다시 처음 인덱스로 되돌리기
+		}
+	};
+
+	//미사일 움직이는 함수
+	function moveMissile(){
+		for (var i = 0; i < missList.length; i++) {
+			// var tmp =  missList[i];
+			missList[i].y -= 10;
+			if(missList[i].y < -25){  //위쪽으로 화면을 벗어났다면
+				//배열에서 재거 될수 있도록 표시 한다.
+				missList[i].isDead=true;
+			}
+		}
+	};
+
+	var nums = [10,20,30,40,50];
+
+	//미사일 
+	function checkMissile(){
+		for (var i = missList.length - 1; i >= 0; i--) {
+			missList[i];
+			if(missList[i].isDead){
+				missList.splice(i,1);
+			}
+		}
+	}
+
+
+
+
+	function backScroll(){ 
+
+		back1Y +=5;
+		back2Y +=5;
+		if(back1Y >= 800){
+			back1Y = -800;
+			back2Y=0;
+		}
+		if (back2Y >= 800) {
+			back2Y = -800;
+			back1Y=0;
+		}
+	};
+
+	
+
+	document.querySelectorAll("body")[0].addEventListener("keydown", function(){
+		console.log("keydown!");
+		//미사일 정보를 갖는 객체를 만든다.
+		var obj={x:unitX,y:unitY,isDead:false};
+		//배열에 저장
+		missList.push(obj);
+
+	});
+
+
+
+
+
+
+</script>
+	
+</body>
+</html>
